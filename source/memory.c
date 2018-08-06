@@ -48,55 +48,55 @@ unsigned char readByte(unsigned short address) {
 	//if(address == 0x0300) {
 	//	realtimeDebugEnable = 1;
 	//}
-	
+
 	if(address <= 0x7fff)
 		return cart[address];
-	
+
 	else if(address >= 0xa000 && address <= 0xbfff)
 		return sram[address - 0xa000];
-	
+
 	else if(address >= 0x8000 && address <= 0x9fff)
 		return vram[address - 0x8000];
-	
+
 	else if(address >= 0xc000 && address <= 0xdfff)
 		return wram[address - 0xc000];
-	
+
 	else if(address >= 0xe000 && address <= 0xfdff)
 		return wram[address - 0xe000];
-	
+
 	else if(address >= 0xfe00 && address <= 0xfeff)
 		return oam[address - 0xfe00];
-	
+
 	// Should return a div timer, but a random number works just as well for Tetris
 	else if(address == 0xff04) return (unsigned char)rand();
-	
+
 	else if(address == 0xff40) return gpu.control;
 	else if(address == 0xff42) return gpu.scrollY;
 	else if(address == 0xff43) return gpu.scrollX;
 	else if(address == 0xff44) return gpu.scanline; // read only
-	
+
 	else if(address == 0xff00) {
 		if(!(io[0x00] & 0x20)) {
 			return (unsigned char)(0xc0 | keys.keys1 | 0x10);
 		}
-		
+
 		else if(!(io[0x00] & 0x10)) {
 			return (unsigned char)(0xc0 | keys.keys2 | 0x20);
 		}
-		
+
 		else if(!(io[0x00] & 0x30)) return 0xff;
 		else return 0;
 	}
-	
+
 	else if(address == 0xff0f) return interrupt.flags;
 	else if(address == 0xffff) return interrupt.enable;
-	
+
 	else if(address >= 0xff80 && address <= 0xfffe)
 		return hram[address - 0xff80];
-	
+
 	else if(address >= 0xff00 && address <= 0xff7f)
 		return io[address - 0xff00];
-	
+
 	return 0;
 }
 
@@ -107,63 +107,65 @@ unsigned short readShort(unsigned short address) {
 unsigned short readShortFromStack(void) {
 	unsigned short value = readShort(registers.sp);
 	registers.sp += 2;
-	
+
 	#ifdef DEBUG_STACK
 		printf("Stack read 0x%04x\n", value);
 	#endif
-	
+
 	return value;
 }
 
 void writeByte(unsigned short address, unsigned char value) {
+	if (registers.pc > 0x100)
+		printf("write %04X: %02X\n", address, value);
 	// Set write breakpoints here
 	//if(address == 0xff00) {
 	//	realtimeDebugEnable = 1;
 	//}
-	
+
 	if(address >= 0xa000 && address <= 0xbfff)
 		sram[address - 0xa000] = value;
-	
+
 	else if(address >= 0x8000 && address <= 0x9fff) {
 		vram[address - 0x8000] = value;
 		if(address <= 0x97ff) updateTile(address, value);
 	}
-	
+
 	if(address >= 0xc000 && address <= 0xdfff)
 		wram[address - 0xc000] = value;
-	
+
 	else if(address >= 0xe000 && address <= 0xfdff)
 		wram[address - 0xe000] = value;
-	
+
 	else if(address >= 0xfe00 && address <= 0xfeff)
 		oam[address - 0xfe00] = value;
-	
+
 	else if(address >= 0xff80 && address <= 0xfffe)
 		hram[address - 0xff80] = value;
-	
+
 	else if(address == 0xff40) gpu.control = value;
 	else if(address == 0xff42) gpu.scrollY = value;
 	else if(address == 0xff43) gpu.scrollX = value;
 	else if(address == 0xff46) copy(0xfe00, value << 8, 160); // OAM DMA
-	
+
 	else if(address == 0xff47) { // write only
 		int i;
 		for(i = 0; i < 4; i++) backgroundPalette[i] = palette[(value >> (i * 2)) & 3];
 	}
-	
+
 	else if(address == 0xff48) { // write only
 		int i;
 		for(i = 0; i < 4; i++) spritePalette[0][i] = palette[(value >> (i * 2)) & 3];
 	}
-	
+
 	else if(address == 0xff49) { // write only
 		int i;
 		for(i = 0; i < 4; i++) spritePalette[1][i] = palette[(value >> (i * 2)) & 3];
 	}
-	
+
 	else if(address >= 0xff00 && address <= 0xff7f)
 		io[address - 0xff00] = value;
-	
+
 	else if(address == 0xff0f) interrupt.flags = value;
 	else if(address == 0xffff) interrupt.enable = value;
 }
@@ -176,7 +178,7 @@ void writeShort(unsigned short address, unsigned short value) {
 void writeShortToStack(unsigned short value) {
 	registers.sp -= 2;
 	writeShort(registers.sp, value);
-	
+
 	#ifdef DEBUG_STACK
 		printf("Stack write 0x%04x\n", value);
 	#endif

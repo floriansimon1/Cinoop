@@ -40,69 +40,69 @@ void quit(void) {
 
 int main(int argc, char **argv) {
 	char *filename = NULL;
-	
-	printf("Starting...\n");
-	
+
+	// printf("Starting...\n");
+
 	dpy = XOpenDisplay(NULL);
-	
+
 	if(dpy == NULL) {
 		printf("Cannot connect to X server!\n");
 		exit(0);
 	}
-	
+
 	root = DefaultRootWindow(dpy);
-	
+
 	vi = glXChooseVisual(dpy, 0, att);
-	
+
 	if(vi == NULL) {
 		printf("No appropriate visual found!\n");
 		exit(0);
 	}
-	
+
 	cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
-	
+
 	swa.colormap = cmap;
 	swa.event_mask = ExposureMask | KeyPressMask;
-	
+
 	win = XCreateWindow(dpy, root, 0, 0, 160, 144, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
-	
+
 	XMapWindow(dpy, win);
 	XStoreName(dpy, win, "Cinoop");
-	
+
 	glc = glXCreateContext(dpy, vi, NULL, GL_TRUE);
 	glXMakeCurrent(dpy, win, glc);
-	
-	printf("argc = %d\n", argc);
+
+	// printf("argc = %d\n", argc);
 	int i;
 	for(i = 1; i < argc; i++) {
 		filename = argv[i];
 	}
-	
+
 	if(filename == NULL) {
-		printf("No ROM input\n");
-		
+		// printf("No ROM input\n");
+
 		quit();
 		return 1;
 	}
-	
-	printf("Loading file \"%s\"...\n", filename);
-	
+
+	// printf("Loading file \"%s\"...\n", filename);
+
 	if(!loadROM(filename)) {
 		printf("Failed!\n");
-		
+
 		quit();
 		return 1;
 	}
-	
-	printf("Passed!\n");
-	
+
+	// printf("Passed!\n");
+
 	srand(time(NULL));
 	reset();
-	
+
 	while(1) {
 		if(XPending(dpy)) {
 			XNextEvent(dpy, &xev);
-			
+
 			if(xev.type == KeyPress || xev.type == KeyRelease) {
 				//printf("%d\n", xev.xkey.keycode);
 				switch(xev.xkey.keycode) {
@@ -110,37 +110,37 @@ int main(int argc, char **argv) {
 					case 22:
 						keys.select = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_Return:
 					case 36:
 						keys.start = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_z:
 					case 52:
 						keys.b = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_x:
 					case 53:
 						keys.a = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_Left:
 					case 113:
 						keys.left = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_Right:
 					case 114:
 						keys.right = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_Up:
 					case 111:
 						keys.up = (xev.type == KeyPress);
 						break;
-					
+
 					//case XK_Down:
 					case 116:
 						keys.down = (xev.type == KeyPress);
@@ -148,13 +148,13 @@ int main(int argc, char **argv) {
 				}
 			}
 		}
-		
+
 		cpuStep();
 		gpuStep();
 		interruptStep();
 	}
-	
+
 	quit();
-	
+
 	return 0;
 }

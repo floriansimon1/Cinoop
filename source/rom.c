@@ -49,74 +49,74 @@ unsigned char loadROM(char *filename) {
 	enum romType type;
 	int romSize;
 	int ramSize;
-	
+
 	int i;
-	
+
 	#ifdef DS3
 	u64 length;
 	u32 bytesRead;
-	
+
 	FS_archive sdmcArchive = (FS_archive){ARCH_SDMC, (FS_path){PATH_EMPTY, 1, (u8*)""}};
 	FS_path filePath = FS_makePath(PATH_CHAR, filename); // /filename
-	
+
 	Result ret = FSUSER_OpenFileDirectly(NULL, &fileHandle, sdmcArchive, filePath, FS_OPEN_READ, FS_ATTRIBUTE_NONE);
 	if(ret) return false;
-	
+
 	ret = FSFILE_GetSize(fileHandle, &length);
 	if(ret) return false;
-	
+
 	ret = FSFILE_Read(fileHandle, &bytesRead, 0x0, cart, length);
 	if(ret || length != bytesRead) return false;
-	
+
 	memset(name, '\0', 17);
 	for(i = 0; i < 16; i++) {
 		if(cart[i + ROM_OFFSET_NAME] == 0x80 || cart[i + ROM_OFFSET_NAME] == 0xc0) name[i] = '\0';
 		else name[i] = cart[i + ROM_OFFSET_NAME];
 	}
-	
-	printf("Internal ROM name: %s\n", name);
-	
+
+	// printf("Internal ROM name: %s\n", name);
+
 	type = cart[ROM_OFFSET_TYPE];
-	
+
 	if(!romTypeString[type]) {
 		printf("Unknown ROM type: %#02x\n", type);
 		return false;
 	}
-	
+
 	printf("ROM type: %s\n", romTypeString[type]);
-	
+
 	if(type != ROM_PLAIN) {
 		printf("Only 32KB games with no mappers are supported!\n");
 		return false;
 	}
-	
+
 	romSize = cart[ROM_OFFSET_ROM_SIZE];
-	
+
 	if((romSize & 0xF0) == 0x50) romSize = (int)pow(2.0, (double)(((0x52) & 0xF) + 1)) + 64;
 	else romSize = (int)pow(2.0, (double)(romSize + 1));
-	
-	printf("ROM size: %dKB\n", romSize * 16);
-	
+
+	// printf("ROM size: %dKB\n", romSize * 16);
+
 	if(romSize * 16 != 32) {
 		printf("Only 32KB games with no mappers are supported!\n");
 		return false;
 	}
-	
+
 	if(length != romSize * 16 * 1024) {
 		printf("ROM filesize does not equal ROM size!\n");
 		return false;
 	}
-	
+
 	ramSize = cart[ROM_OFFSET_RAM_SIZE];
-	
+
 	ramSize = (int)pow(4.0, (double)ramSize) / 2;
-	printf("RAM size: %dKB\n", ramSize);
-	
+	// printf("RAM size: %dKB\n", ramSize);
+
 	ramSize = ceil(ramSize / 8.0f);
-	
+
 	ret = FSFILE_Close(fileHandle);
 	if(ret) return false;
-	
+
 	return 1;
 #else
 #ifdef PS4
@@ -126,12 +126,12 @@ unsigned char loadROM(char *filename) {
 #else
 	FILE *f;
 	size_t length;
-	
+
 	unsigned char header[0x180];
-	
+
 	f = fopen(filename, "rb");
 	if(!f) return 0;
-	
+
 	fseek(f, 0, SEEK_END);
 	length = ftell(f);
 	if(length < 0x180) {
@@ -139,36 +139,36 @@ unsigned char loadROM(char *filename) {
 		fclose(f);
 		return 0;
 	}
-	
+
 	rewind(f);
 	fread(header, 0x180, 1, f);
-	
+
 	memset(name, '\0', 17);
 	for(i = 0; i < 16; i++) {
 		if(header[i + ROM_OFFSET_NAME] == 0x80 || header[i + ROM_OFFSET_NAME] == 0xc0) name[i] = '\0';
 		else name[i] = header[i + ROM_OFFSET_NAME];
 	}
-	
-	printf("Internal ROM name: %s\n", name);
-	
+
+	// printf("Internal ROM name: %s\n", name);
+
 	type = header[ROM_OFFSET_TYPE];
-	
+
 	if(!romTypeString[type]) {
 		printf("Unknown ROM type: %#02x\n", type);
 		fclose(f);
 		return 0;
 	}
-	
-	printf("ROM type: %s\n", romTypeString[type]);
-	
+
+	// printf("ROM type: %s\n", romTypeString[type]);
+
 	if(type != ROM_PLAIN) {
 		printf("Only 32KB games with no mappers are supported!\n");
 		fclose(f);
 		return 0;
 	}
-	
+
 	romSize = header[ROM_OFFSET_ROM_SIZE];
-	
+
 	#ifndef PSP
 		if((romSize & 0xF0) == 0x50) romSize = (int)pow(2.0, (double)(((0x52) & 0xF) + 1)) + 64;
 		else romSize = (int)pow(2.0, (double)(romSize + 1));
@@ -176,46 +176,46 @@ unsigned char loadROM(char *filename) {
 		// PSP doesn't support pow...
 		romSize = 2;
 	#endif
-	
-	printf("ROM size: %dKB\n", romSize * 16);
-	
+
+	// printf("ROM size: %dKB\n", romSize * 16);
+
 	if(romSize * 16 != 32) {
 		printf("Only 32KB games with no mappers are supported!\n");
 		fclose(f);
 		return 0;
 	}
-	
+
 	if(length != romSize * 16 * 1024) {
 		printf("ROM filesize does not equal ROM size!\n");
 		//fclose(f);
 		//return 0;
 	}
-	
+
 	ramSize = header[ROM_OFFSET_RAM_SIZE];
-	
+
 	#ifndef PSP
 		ramSize = (int)pow(4.0, (double)(ramSize)) / 2;
 	#else
 		// PSP doesn't support pow...
 		ramSize = 0;
 	#endif
-	
-	printf("RAM size: %dKB\n", ramSize);
-	
+
+	// printf("RAM size: %dKB\n", ramSize);
+
 	ramSize = ceil(ramSize / 8.0f);
-	
+
 	/*cart = malloc(length);
 	if(!cart) {
 		printf("Could not allocate memory!\n");
 		fclose(f);
 		return 0;
 	}*/
-	
+
 	rewind(f);
 	fread(cart, length, 1, f);
-	
+
 	fclose(f);
-	
+
 	return 1;
 	#endif
 #endif

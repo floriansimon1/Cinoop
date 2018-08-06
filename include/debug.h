@@ -7,11 +7,7 @@
 
 extern unsigned char realtimeDebugEnable;
 
-#ifdef WIN
-	void realtimeDebug(void);
-#else
-	#define realtimeDebug()
-#endif
+void realtimeDebug(void);
 
 #ifdef WIN
 	#ifndef DEBUG_JUMP
@@ -23,8 +19,4 @@ extern unsigned char realtimeDebugEnable;
 	#define debugJump()
 #endif
 
-#ifdef WIN
-	void printRegisters(void);
-#else
-	#define printRegisters()
-#endif
+void printRegisters(void);

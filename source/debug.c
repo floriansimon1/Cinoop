@@ -13,48 +13,24 @@
 
 unsigned char realtimeDebugEnable = 0;
 
-#ifdef WIN
 void realtimeDebug(void) {
-	char debugMessage[5000];
-	char *debugMessageP = debugMessage;
-	
 	unsigned char instruction = readByte(registers.pc);
-	unsigned short operand = 0;
-	
-	if(instructions[instruction].operandLength == 1) operand = (unsigned short)readByte(registers.pc + 1);
-	if(instructions[instruction].operandLength == 2) operand = readShort(registers.pc + 1);
-	
-	if(instructions[instruction].operandLength) debugMessageP += sprintf(debugMessageP, instructions[instruction].disassembly, operand);
-	else debugMessageP += sprintf(debugMessageP, instructions[instruction].disassembly);
-	
-	debugMessageP += sprintf(debugMessageP, "\n\nAF: 0x%04x\n", registers.af);
-	debugMessageP += sprintf(debugMessageP, "BC: 0x%04x\n", registers.bc);
-	debugMessageP += sprintf(debugMessageP, "DE: 0x%04x\n", registers.de);
-	debugMessageP += sprintf(debugMessageP, "HL: 0x%04x\n", registers.hl);
-	debugMessageP += sprintf(debugMessageP, "SP: 0x%04x\n", registers.sp);
-	debugMessageP += sprintf(debugMessageP, "PC: 0x%04x\n", registers.pc);
-	
-	debugMessageP += sprintf(debugMessageP, "\nIME: 0x%02x\n", interrupt.master);
-	debugMessageP += sprintf(debugMessageP, "IE: 0x%02x\n", interrupt.enable);
-	debugMessageP += sprintf(debugMessageP, "IF: 0x%02x\n", interrupt.flags);
-	
-	debugMessageP += sprintf(debugMessageP, "\nContinue debugging?\n");
-	
-	realtimeDebugEnable = MessageBox(NULL, debugMessage, "Cinoop Breakpoint", MB_YESNO) == IDYES ? 1 : 0;
+	// unsigned short operand = 0;
+
+	printf("PC: %04X, AF: %04X, BC: %04X, DE: %04X, HL: %04X, SP: %04X, (SP16): %04X, (HL16): %04X - %s\n",
+			registers.pc,
+			registers.af,
+			registers.bc,
+			registers.de,
+			registers.hl,
+			registers.sp,
+			readShort(registers.sp),
+			readShort(registers.hl),
+			instructions[instruction].disassembly
+	);
 }
 
-#ifdef DEBUG_JUMP
-void debugJump(void) {
-	static unsigned short lastPC = 0;
-	
-	if(registers.pc != lastPC) {
-		printf("Jumped to 0x%04x\n", registers.pc);
-		lastPC = registers.pc;
-	}
-}
-#endif
-
-void printRegisters(void) {
+void printRegisters() {
 	printf("A: 0x%02x\n", registers.a);
 	printf("F: 0x%02x\n", registers.f);
 	printf("B: 0x%02x\n", registers.b);
@@ -69,4 +45,3 @@ void printRegisters(void) {
 	printf("IE: 0x%02x\n", interrupt.enable);
 	printf("IF: 0x%02x\n", interrupt.flags);
 }
-#endif

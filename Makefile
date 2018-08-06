@@ -54,9 +54,9 @@ clean:
 	rm -f PARAM.SFO
 	rm -f EBOOT.PBP
 	rm -f cinoop.bin
-	rmdir wbuild
-	rmdir dbuild
-	rmdir gbuild
-	rmdir 3build
+	#rmdir wbuild
+	#rmdir dbuild
+	#rmdir gbuild
+	#rmdir 3build
 	rmdir lbuild
-	rmdir xbuild
+	#rmdir xbuild

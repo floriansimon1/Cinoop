@@ -22,9 +22,9 @@
 //#define NOFS
 #ifdef NOFS
 	#include "string.h"
-	
+
 	#include "memory.h"
-	
+
 	#include "tetris_bin.h"
 #endif
 
@@ -44,32 +44,32 @@ void quit(void) {
 
 int main(void) {
 	VIDEO_Init();
-	
+
 	rmode = VIDEO_GetPreferredMode(NULL);
-	
+
 	PAD_Init();
-	
+
 	framebuffer = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
-	
+
 	VIDEO_Configure(rmode);
-	
+
 	VIDEO_SetNextFramebuffer(framebuffer);
-	
+
 	VIDEO_SetBlack(FALSE);
 	VIDEO_Flush();
 	VIDEO_WaitVSync();
 	if(rmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
-	
+
 	console_init(framebuffer, 20, 20, rmode->fbWidth, rmode->xfbHeight, rmode->fbWidth * 2);
-	
-	printf("Starting...\n");
-	
+
+	// printf("Starting...\n");
+
 	#ifndef NOFS
 		if(!fatInitDefault()) {
 			printf("FAT init failed!\n");
 			quit();
 		}
-		
+
 		if(!loadROM("tetris.gb")) {
 			printf("Failed to load ROM!\n");
 			quit();
@@ -77,16 +77,16 @@ int main(void) {
 	#else
 		memcpy(cart, tetris_bin, tetris_bin_size);
 	#endif
-	
+
 	printf("ROM load passed!\n");
-	
+
 	srand(time(NULL));
 	reset();
-	
+
 	while(1) {
 		PAD_ScanPads();
 		int buttonsDown = PAD_ButtonsHeld(0);
-		
+
 		//keys.c = 0xff;
 		keys.keys1 = 0xf;
 		keys.keys2 = 0xf;
@@ -98,7 +98,7 @@ int main(void) {
 		if(buttonsDown & PAD_BUTTON_RIGHT) keys.right = 0;
 		if(buttonsDown & PAD_BUTTON_UP) keys.up = 0;
 		if(buttonsDown & PAD_BUTTON_DOWN) keys.down = 0;
-		
+
 		cpuStep();
 		gpuStep();
 		interruptStep();

@@ -334,7 +334,7 @@ void reset(void) {
 	memset(oam, 0, sizeof(oam));
 	memset(wram, 0, sizeof(wram));
 	memset(hram, 0, sizeof(hram));
-	
+
 	registers.a = 0x01;
 	registers.f = 0xb0;
 	registers.b = 0x00;
@@ -345,11 +345,11 @@ void reset(void) {
 	registers.l = 0x4d;
 	registers.sp = 0xfffe;
 	registers.pc = 0x100;
-	
+
 	interrupt.master = 1;
 	interrupt.enable = 0;
 	interrupt.flags = 0;
-	
+
 	keys.a = 1;
 	keys.b = 1;
 	keys.select = 1;
@@ -358,37 +358,37 @@ void reset(void) {
 	keys.left = 1;
 	keys.up = 1;
 	keys.down = 1;
-	
+
 	memset(tiles, 0, sizeof(tiles));
-	
+
 	backgroundPalette[0] = palette[0];
 	backgroundPalette[1] = palette[1];
 	backgroundPalette[2] = palette[2];
 	backgroundPalette[3] = palette[3];
-	
+
 	spritePalette[0][0] = palette[0];
 	spritePalette[0][1] = palette[1];
 	spritePalette[0][2] = palette[2];
 	spritePalette[0][3] = palette[3];
-	
+
 	spritePalette[1][0] = palette[0];
 	spritePalette[1][1] = palette[1];
 	spritePalette[1][2] = palette[2];
 	spritePalette[1][3] = palette[3];
-	
+
 	gpu.control = 0;
 	gpu.scrollX = 0;
 	gpu.scrollY = 0;
 	gpu.scanline = 0;
 	gpu.tick = 0;
-	
+
 	ticks = 0;
 	stopped = 0;
-	
+
 	#ifdef WIN
 		memset(framebuffer, 255, sizeof(framebuffer));
 	#endif
-	
+
 	writeByte(0xFF05, 0);
 	writeByte(0xFF06, 0);
 	writeByte(0xFF07, 0);
@@ -425,56 +425,56 @@ void reset(void) {
 void cpuStep(void) {
 	unsigned char instruction;
 	unsigned short operand = 0;
-	
+
 	if(stopped) return;
-	
+
 	// General breakpoints
-	//if(registers.pc == 0x034c) { // incorrect load
+	// if(registers.pc == 0x034c) { // incorrect load
 	//if(registers.pc == 0x0309) { // start of function which writes to ff80
 	//if(registers.pc == 0x2a02) { // closer to function call which writes to ff80
 	//if(registers.pc == 0x034c) { // function which writes to ffa6 timer
-	
+
 	//if(registers.pc == 0x036c) { // loop
 	//if(registers.pc == 0x0040) { // vblank
-	
+
 	//if(registers.pc == 0x29fa) { // input
-	//	realtimeDebugEnable = 1;
+		realtimeDebugEnable = 1;
 	//}
-	
+
 	if(realtimeDebugEnable) realtimeDebug();
-	
+
 	instruction = readByte(registers.pc++);
-	
+
 	if(instructions[instruction].operandLength == 1) operand = (unsigned short)readByte(registers.pc);
 	if(instructions[instruction].operandLength == 2) operand = readShort(registers.pc);
 	registers.pc += instructions[instruction].operandLength;
-	
+
 	//if(instructions[instruction].operandLength) printf(instructions[instruction].disassembly, operand);
 	//else printf(instructions[instruction].disassembly);
 	//printf("\n");
-	
+
 	switch(instructions[instruction].operandLength) {
 		case 0:
 			((void (*)(void))instructions[instruction].execute)();
 			break;
-		
+
 		case 1:
 			((void (*)(unsigned char))instructions[instruction].execute)((unsigned char)operand);
 			break;
-		
+
 		case 2:
 			((void (*)(unsigned short))instructions[instruction].execute)(operand);
 			break;
 	}
-	
+
 	ticks += instructionTicks[instruction];
 }
 
 void undefined(void) {
 	registers.pc--;
-	
+
 	unsigned char instruction = readByte(registers.pc);
-	
+
 	#ifdef WIN
 		char d[100];
 		sprintf(d, "Undefined instruction 0x%02x!\n\nCheck stdout for more details.", instruction);
@@ -484,7 +484,7 @@ void undefined(void) {
 		printf("Undefined instruction 0x%02x!\n", instruction);
 	#endif
 	#endif
-	
+
 	printRegisters();
 	quit();
 }
@@ -492,153 +492,153 @@ void undefined(void) {
 static unsigned char inc(unsigned char value) {
 	if((value & 0x0f) == 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	value++;
-	
+
 	if(value) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE);
-	
+
 	return value;
 }
 
 static unsigned char dec(unsigned char value) {
 	if(value & 0x0f) FLAGS_CLEAR(FLAGS_HALFCARRY);
 	else FLAGS_SET(FLAGS_HALFCARRY);
-	
+
 	value--;
-	
+
 	if(value) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	FLAGS_SET(FLAGS_NEGATIVE);
-	
+
 	return value;
 }
 
 static void add(unsigned char *destination, unsigned char value) {
 	unsigned int result = *destination + value;
-	
+
 	if(result & 0xff00) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	*destination = (unsigned char)(result & 0xff);
-	
+
 	if(*destination) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	if(((*destination & 0x0f) + (value & 0x0f)) > 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE);
 }
 
 static void add2(unsigned short *destination, unsigned short value) {
 	unsigned long result = *destination + value;
-	
+
 	if(result & 0xffff0000) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	*destination = (unsigned short)(result & 0xffff);
-	
+
 	if(((*destination & 0x0f) + (value & 0x0f)) > 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	// zero flag left alone
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE);
 }
 
 static void adc(unsigned char value) {
 	value += FLAGS_ISCARRY ? 1 : 0;
-	
+
 	int result = registers.a + value;
-	
+
 	if(result & 0xff00) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if(value == registers.a) FLAGS_SET(FLAGS_ZERO);
 	else FLAGS_CLEAR(FLAGS_ZERO);
-	
+
 	if(((value & 0x0f) + (registers.a & 0x0f)) > 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	FLAGS_SET(FLAGS_NEGATIVE);
-	
+
 	registers.a = (unsigned char)(result & 0xff);
 }
 
 static void sbc(unsigned char value) {
 	value += FLAGS_ISCARRY ? 1 : 0;
-	
+
 	FLAGS_SET(FLAGS_NEGATIVE);
-	
+
 	if(value > registers.a) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if(value == registers.a) FLAGS_SET(FLAGS_ZERO);
 	else FLAGS_CLEAR(FLAGS_ZERO);
-	
+
 	if((value & 0x0f) > (registers.a & 0x0f)) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	registers.a -= value;
 }
 
 static void sub(unsigned char value) {
 	FLAGS_SET(FLAGS_NEGATIVE);
-	
+
 	if(value > registers.a) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if((value & 0x0f) > (registers.a & 0x0f)) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	registers.a -= value;
-	
+
 	if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
 }
 
 static void and(unsigned char value) {
 	registers.a &= value;
-	
+
 	if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	FLAGS_CLEAR(FLAGS_CARRY | FLAGS_NEGATIVE);
 	FLAGS_SET(FLAGS_HALFCARRY);
 }
 
 static void or(unsigned char value) {
 	registers.a |= value;
-	
+
 	if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	FLAGS_CLEAR(FLAGS_CARRY | FLAGS_NEGATIVE | FLAGS_HALFCARRY);
 }
 
 static void xor(unsigned char value) {
 	registers.a ^= value;
-	
+
 	if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 	else FLAGS_SET(FLAGS_ZERO);
-	
+
 	FLAGS_CLEAR(FLAGS_CARRY | FLAGS_NEGATIVE | FLAGS_HALFCARRY);
 }
 
 static void cp(unsigned char value) {
 	if(registers.a == value) FLAGS_SET(FLAGS_ZERO);
 	else FLAGS_CLEAR(FLAGS_ZERO);
-	
+
 	if(value > registers.a) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if((value & 0x0f) > (registers.a & 0x0f)) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	FLAGS_SET(FLAGS_NEGATIVE);
 }
 
@@ -668,10 +668,10 @@ void rlca(void) {
 	unsigned char carry = (registers.a & 0x80) >> 7;
 	if(carry) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	registers.a <<= 1;
 	registers.a += carry;
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE | FLAGS_ZERO | FLAGS_HALFCARRY);
 }
 
@@ -701,10 +701,10 @@ void rrca(void) {
 	unsigned char carry = registers.a & 0x01;
 	if(carry) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	registers.a >>= 1;
 	if(carry) registers.a |= 0x80;
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE | FLAGS_ZERO | FLAGS_HALFCARRY);
 }
 
@@ -732,13 +732,13 @@ void ld_d_n(unsigned char operand) { registers.d = operand; }
 // 0x17
 void rla(void) {
 	int carry = FLAGS_ISSET(FLAGS_CARRY) ? 1 : 0;
-	
+
 	if(registers.a & 0x80) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	registers.a <<= 1;
 	registers.a += carry;
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE | FLAGS_ZERO | FLAGS_HALFCARRY);
 }
 
@@ -769,13 +769,13 @@ void ld_e_n(unsigned char operand) { registers.e = operand; }
 // 0x1f
 void rra(void) {
 	int carry = (FLAGS_ISSET(FLAGS_CARRY) ? 1 : 0) << 7;
-	
+
 	if(registers.a & 0x01) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	registers.a >>= 1;
 	registers.a += carry;
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE | FLAGS_ZERO | FLAGS_HALFCARRY);
 }
 
@@ -784,7 +784,7 @@ void jr_nz_n(unsigned char operand) {
 	if(FLAGS_ISZERO) ticks += 8;
 	else {
 		registers.pc += (signed char)operand;
-		
+
 		debugJump();
 		ticks += 12;
 	}
@@ -811,7 +811,7 @@ void ld_h_n(unsigned char operand) { registers.h = operand; }
 // 0x27
 void daa(void) {
 	/*unsigned int reg_one = registers.a;
-	
+
 	//Add or subtract correction values based on Subtract Flag
 	if(!FLAGS_ISNEGATIVE) {
 		if(FLAGS_ISHALFCARRY || ((reg_one & 0xF) > 0x09)) reg_one += 0x06;
@@ -821,42 +821,42 @@ void daa(void) {
 		if(FLAGS_ISHALFCARRY) reg_one = (reg_one - 0x06) & 0xFF;
 		if(FLAGS_ISCARRY) reg_one -= 0x60;
 	}
-	
+
 	//Carry
 	if(reg_one & 0x100) FLAGS_SET(FLAGS_CARRY);
 	reg_one &= 0xFF;
-	
+
 	//Half-Carry
 	FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	//Zero
 	if(reg_one == 0) FLAGS_SET(FLAGS_ZERO);
 	else FLAGS_CLEAR(FLAGS_ZERO);
-	
+
 	registers.a = (unsigned char)reg_one;*/
-	
-	
-	
+
+
+
 	/*
 	{
 		unsigned int a = registers.a;
-		
+
 		if(FLAGS_ISHALFCARRY || ((registers.a & 15) > 9)) registers.a += 6;
 		FLAGS_CLEAR(FLAGS_CARRY);
-		
+
 		if(FLAGS_ISHALFCARRY || a > 0x99) {
 			registers.a += 0x60;
 			FLAGS_SET(FLAGS_CARRY);
 		}
-		
+
 		if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 		else FLAGS_SET(FLAGS_ZERO);
 	}*/
-	
-	
+
+
 	{
 		unsigned short s = registers.a;
-		
+
 		if(FLAGS_ISNEGATIVE) {
 			if(FLAGS_ISHALFCARRY) s = (s - 0x06)&0xFF;
 			if(FLAGS_ISCARRY) s -= 0x60;
@@ -865,47 +865,47 @@ void daa(void) {
 			if(FLAGS_ISHALFCARRY || (s & 0xF) > 9) s += 0x06;
 			if(FLAGS_ISCARRY || s > 0x9F) s += 0x60;
 		}
-		
+
 		registers.a = s;
 		FLAGS_CLEAR(FLAGS_HALFCARRY);
-		
+
 		if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
 		else FLAGS_SET(FLAGS_ZERO);
-		
+
 		if(s >= 0x100) FLAGS_SET(FLAGS_CARRY);
 	}
-	
+
 	/*
-	
-	
+
+
 	{
 		unsigned int a = registers.a;
-		
+
 		unsigned int correction = FLAGS_ISCARRY ? 0x60 : 0x00;
-		
+
 		if(FLAGS_ISHALFCARRY) correction |= 0x06;
-		
+
 		if(!FLAGS_ISNEGATIVE) {
 			if ((a & 0x0F) > 0x09)
 				correction |= 0x06;
 			if (a > 0x99)
 				correction |= 0x60;
-			
+
 			a += correction;
 		}
 		else a -= correction;
 
 		if(correction << 2 & 0x100) FLAGS_SET(FLAGS_CARRY);
 		else FLAGS_CLEAR(FLAGS_CARRY);
-		
+
 		if(a == 0) FLAGS_SET(FLAGS_ZERO);
 		else FLAGS_CLEAR(FLAGS_ZERO);
-		
+
 		a &= 0xFF;
-		
+
 		registers.a = a;
 	}
-	
+
 	*/
 }
 
@@ -1002,7 +1002,7 @@ void ld_a_n(unsigned char operand) { registers.a = operand; }
 void ccf(void) {
 	if(FLAGS_ISCARRY) FLAGS_CLEAR(FLAGS_CARRY);
 	else FLAGS_SET(FLAGS_CARRY);
-	
+
 	FLAGS_CLEAR(FLAGS_NEGATIVE | FLAGS_HALFCARRY);
 }
 
@@ -1546,7 +1546,10 @@ void sbc_n(unsigned char operand) { sbc(operand); }
 void rst_18(void) { writeShortToStack(registers.pc); registers.pc = 0x0018; }
 
 // 0xe0
-void ld_ff_n_ap(unsigned char operand) { writeByte(0xff00 + operand, registers.a); }
+void ld_ff_n_ap(unsigned char operand) {
+	// printf("LDH (a8), A: address FF%02X, value: %02X \n", readByte(0xff00 + operand), registers.a);
+	writeByte(0xff00 + operand, registers.a);
+}
 
 // 0xe1
 void pop_hl(void) { registers.hl = readShortFromStack(); }
@@ -1560,7 +1563,7 @@ void push_hl(void) { writeShortToStack(registers.hl); }
 // 0xe6
 void and_n(unsigned char operand) {
 	registers.a &= operand;
-	
+
 	FLAGS_CLEAR(FLAGS_CARRY | FLAGS_NEGATIVE);
 	FLAGS_SET(FLAGS_HALFCARRY);
 	if(registers.a) FLAGS_CLEAR(FLAGS_ZERO);
@@ -1573,15 +1576,15 @@ void rst_20(void) { writeShortToStack(registers.pc); registers.pc = 0x0020; }
 // 0xe8
 void add_sp_n(char operand) {
 	int result = registers.sp + operand;
-	
+
 	if(result & 0xffff0000) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	registers.sp = result & 0xffff;
-	
+
 	if(((registers.sp & 0x0f) + (operand & 0x0f)) > 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	// _does_ clear the zero flag
 	FLAGS_CLEAR(FLAGS_ZERO | FLAGS_NEGATIVE);
 }
@@ -1602,7 +1605,10 @@ void xor_n(unsigned char operand) { xor(operand); }
 void rst_28(void) { writeShortToStack(registers.pc); registers.pc = 0x0028; }
 
 // 0xf0
-void ld_ff_ap_n(unsigned char operand) { registers.a = readByte(0xff00 + operand); }
+void ld_ff_ap_n(unsigned char operand) {
+	// printf("LDH A, (a8): address FF%02X, value: %02X \n", operand, readByte(0xff00 + operand));
+	registers.a = readByte(0xff00 + operand);
+}
 
 // 0xf1
 void pop_af(void) { registers.af = readShortFromStack(); }
@@ -1625,15 +1631,15 @@ void rst_30(void) { writeShortToStack(registers.pc); registers.pc = 0x0030; }
 // 0xf8
 void ld_hl_sp_n(unsigned char operand) {
 	int result = registers.sp + (signed char)operand;
-	
+
 	if(result & 0xffff0000) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if(((registers.sp & 0x0f) + (operand & 0x0f)) > 0x0f) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
-	
+
 	FLAGS_CLEAR(FLAGS_ZERO | FLAGS_NEGATIVE);
-	
+
 	registers.hl = (unsigned short)(result & 0xffff);
 }
 
@@ -1649,13 +1655,13 @@ void ei(void) { interrupt.master = 1; }
 // 0xfe
 void cp_n(unsigned char operand) {
 	FLAGS_SET(FLAGS_NEGATIVE);
-	
+
 	if(registers.a == operand) FLAGS_SET(FLAGS_ZERO);
 	else FLAGS_CLEAR(FLAGS_ZERO);
-	
+
 	if(operand > registers.a) FLAGS_SET(FLAGS_CARRY);
 	else FLAGS_CLEAR(FLAGS_CARRY);
-	
+
 	if((operand & 0x0f) > (registers.a & 0x0f)) FLAGS_SET(FLAGS_HALFCARRY);
 	else FLAGS_CLEAR(FLAGS_HALFCARRY);
 }
